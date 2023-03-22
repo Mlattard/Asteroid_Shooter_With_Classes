@@ -1,13 +1,24 @@
 import pygame, sys
 from random import randint, uniform
 
+# Authors
+# All code is from the course "Learn Python by making games" by Christian Koch.
+# The link for the course is : https://www.udemy.com/course/learn-python-by-making-games/
+
 class Ship(pygame.sprite.Sprite):
     def __init__(self, groups):
         super().__init__(groups)
+
         self.image = pygame.image.load('graphics/ship.png').convert_alpha()
+        
         self.rect = self.image.get_rect(center = (WINDOW_WIDTH /2, WINDOW_HEIGHT /2))
+        
+        self.mask = pygame.mask.from_surface(self.image)
+
         self.can_shoot = True
         self.shoot_time = None
+
+        self.laser_sound = pygame.mixer.Sound('sounds/laser.ogg')
 
     def input_and_pos(self):
         pos = pygame.mouse.get_pos()
@@ -18,6 +29,7 @@ class Ship(pygame.sprite.Sprite):
             self.can_shoot = False
             self.shoot_time = pygame.time.get_ticks()
             Laser(self.rect.midtop, laser_group)
+            self.laser_sound.play()
 
     def laser_timer(self):
         if not self.can_shoot:
@@ -26,7 +38,7 @@ class Ship(pygame.sprite.Sprite):
                 self.can_shoot = True
 
     def meteor_collision(self):
-        if pygame.sprite.spritecollide(self, meteor_group, False):
+        if pygame.sprite.spritecollide(self, meteor_group, False, pygame.sprite.collide_mask):
             pygame.quit()
             sys.exit()
 
@@ -42,6 +54,9 @@ class Laser(pygame.sprite.Sprite):
         super().__init__(groups)
         self.image = pygame.image.load('graphics/laser.png').convert_alpha()
         self.rect = self.image.get_rect(midbottom = pos)
+        self.mask = pygame.mask.from_surface(self.image)
+
+        self.explosion_sound = pygame.mixer.Sound('sounds/explosion.wav')
         
         # float based position
         self.pos = pygame.math.Vector2(self.rect.topleft)
@@ -49,8 +64,10 @@ class Laser(pygame.sprite.Sprite):
         self.speed = 600
 
     def meteor_collision(self):
-        if pygame.sprite.spritecollide(self, meteor_group, True):
+        if pygame.sprite.spritecollide(self, meteor_group, True, pygame.sprite.collide_mask):
             self.kill()
+            
+            self.explosion_sound.play()
 
     def update(self):
         self.pos += self.direction * self.speed * dt
@@ -82,11 +99,14 @@ class Meteor(pygame.sprite.Sprite):
         self.rotation = 0
         self.rotation_speed = randint(20, 50)
 
+        self.mask = pygame.mask.from_surface(self.image)
+
     def rotate(self):
         self.rotation += self.rotation_speed * dt
         rotated_surf = pygame.transform.rotozoom(self.scaled_surf, self.rotation, 1)
         self.image = rotated_surf
         self.rect = self.image.get_rect(center = self.rect.center)
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
         self.pos += self.direction * self.speed * dt
@@ -131,6 +151,10 @@ score = Score()
 # meteor timer
 meteor_timer = pygame.event.custom_type()
 pygame.time.set_timer(meteor_timer, 400)
+
+# music
+bg_music = pygame.mixer.Sound('sounds/music.wav')
+bg_music.play(-1)
 
 # game loop
 while True:
